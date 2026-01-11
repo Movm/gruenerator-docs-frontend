@@ -1,6 +1,6 @@
 # Grünerator Docs - Collaborative Documentation Frontend
 
-Standalone React frontend for Grünerator's collaborative documentation platform. This app connects to the production Grünerator backend at `https://gruenerator.de/api` for authentication, document management, and real-time collaboration.
+Standalone React frontend for Grünerator's collaborative documentation platform. This app connects to the production Grünerator backend at `https://gruenerator.eu/api` for authentication, document management, and real-time collaboration.
 
 ## Features
 
@@ -53,19 +53,19 @@ The app uses environment variables to configure backend URLs:
 ```bash
 # API calls proxied to production
 VITE_API_BASE_URL=/api
-VITE_API_TARGET=https://gruenerator.de
+VITE_API_TARGET=https://gruenerator.eu
 
 # WebSocket connection to production
-VITE_HOCUSPOCUS_URL=wss://gruenerator.de:1240
+VITE_HOCUSPOCUS_URL=wss://gruenerator.eu:1240
 ```
 
 **Production (`.env.production`):**
 ```bash
 # Direct API calls to production backend
-VITE_API_BASE_URL=https://gruenerator.de/api
+VITE_API_BASE_URL=https://gruenerator.eu/api
 
 # WebSocket connection
-VITE_HOCUSPOCUS_URL=wss://gruenerator.de:1240
+VITE_HOCUSPOCUS_URL=wss://gruenerator.eu:1240
 ```
 
 ## Architecture
@@ -99,7 +99,7 @@ This frontend connects to the existing Grünerator backend:
 - Permissions: `GET/POST /api/docs/:id/permissions`
 
 **Real-time Collaboration:**
-- WebSocket: `wss://gruenerator.de:1240`
+- WebSocket: `wss://gruenerator.eu:1240`
 - Y.js updates streamed via Hocuspocus
 
 ## Development
@@ -169,8 +169,8 @@ npm run build
    - Publish directory: `dist`
 3. Add environment variables in Netlify dashboard:
    ```
-   VITE_API_BASE_URL=https://gruenerator.de/api
-   VITE_HOCUSPOCUS_URL=wss://gruenerator.de:1240
+   VITE_API_BASE_URL=https://gruenerator.eu/api
+   VITE_HOCUSPOCUS_URL=wss://gruenerator.eu:1240
    ```
 4. Deploy!
 
@@ -195,51 +195,61 @@ npm run build
 3. Add environment variables
 4. Deploy
 
-### Option 4: Docker + Nginx
+### Option 4: Coolify (Self-hosted)
 
-**Dockerfile:**
-```dockerfile
-# Build stage
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
+1. **Create new resource** in Coolify
+   - Type: Application
+   - Source: Public Repository
+   - Repository: `https://github.com/Movm/gruenerator-docs-frontend`
+   - Branch: `main`
 
-# Production stage
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+2. **Build configuration**
+   - Build Pack: Dockerfile
+   - Dockerfile Location: `/Dockerfile` (auto-detected)
+   - Port: `80`
 
-**nginx.conf:**
-```nginx
-server {
-    listen 80;
-    root /usr/share/nginx/html;
-    index index.html;
+3. **Build Arguments** (IMPORTANT - Set in Coolify UI)
 
-    # SPA routing
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
+   Navigate to: Application → Build → Build Arguments
 
-    # Cache assets
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-```
+   Add these build arguments:
+   ```
+   VITE_API_BASE_URL=https://gruenerator.eu/api
+   VITE_HOCUSPOCUS_URL=wss://gruenerator.eu:1240
+   ```
 
-**Build and run:**
+   **Why build arguments?** Vite bakes environment variables into the JavaScript bundle at build time. These must be set as Docker build arguments, not runtime environment variables.
+
+4. **Deploy**
+   - Configure domain (e.g., `docs.gruenerator.eu`)
+   - Coolify handles HTTPS automatically
+   - Deploy!
+
+**Troubleshooting:**
+- **Bad Gateway Error:** Ensure build arguments are set (not environment variables)
+- **Blank Page:** Check browser console for API URL issues
+- **Healthcheck Failures:** The Dockerfile includes a healthcheck; if it fails, check logs
+
+### Option 5: Docker + Nginx (Manual)
+
+The included Dockerfile uses a multi-stage build with default production values.
+
+**Build with custom environment:**
 ```bash
-docker build -t docs-frontend .
+docker build \
+  --build-arg VITE_API_BASE_URL=https://gruenerator.eu/api \
+  --build-arg VITE_HOCUSPOCUS_URL=wss://gruenerator.eu:1240 \
+  -t docs-frontend .
+```
+
+**Run:**
+```bash
 docker run -p 8080:80 docs-frontend
 ```
+
+**Default values:** If no build args are provided, it uses:
+- `VITE_API_BASE_URL=https://gruenerator.eu/api`
+- `VITE_HOCUSPOCUS_URL=wss://gruenerator.eu:1240`
 
 ## Troubleshooting
 

@@ -20,8 +20,15 @@ RUN npm ci --legacy-peer-deps
 # Copy source code
 COPY . .
 
+# Build arguments for Vite environment variables
+ARG VITE_API_BASE_URL=https://gruenerator.eu/api
+ARG VITE_HOCUSPOCUS_URL=wss://gruenerator.eu:1240
+
+# Set as environment variables for the build
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_HOCUSPOCUS_URL=$VITE_HOCUSPOCUS_URL
+
 # Build for production
-# Environment variables will be injected at build time
 RUN npm run build
 
 # ============================================================================
